@@ -1,5 +1,11 @@
 <template name="Home">
 	<div class="container">
 		Useful Home Page
+		{{#form item=item}}
+			{{> input item=this.item field=nameField dict=dict}}
+		{{/form}}
 	</div>
+</template>
+<template name="input">
+	<input type="{{field.type}}" name="{{field.name}}" value="{{val field.name}}" class="form-control"> {{val field.name}}
 </template>
