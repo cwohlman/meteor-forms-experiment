@@ -10,6 +10,12 @@ Template.Home.helpers({
 			, type: 'text'
 		};
 	}
+	, withField: function (field) {
+		var result = _.extend(_.extend({}, this), {
+			field: field.hash
+		});
+		return result;
+	}
 });
 
 Template.Home.events({
