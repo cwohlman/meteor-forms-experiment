@@ -19,3 +19,4 @@ Template.input.events({
 		this.set(name, value);
 	}
 });
+

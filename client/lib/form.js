@@ -52,21 +52,29 @@ Template.form.helpers({
 	}
 });
 
-Template.form.events({
-	'submit form': function (e, tmpl) {
-		if (typeof this.onSubmit == "function") {
-			e.preventDefault();
-			this.validateAll();
-			this.onSubmit();
-		}
-	}
-	// XXX update the selector to include all relevant events.
-	, 'change input': function (e, tmpl) {
-		if (typeof this.onChange == "function") {
-			this.onChange(e, tmpl);
-		}
-	}
-});
+// XXX We could write events here - this would properly scope the events handlers
+// however this makes it hard to customize the event handlers on a per form basis.
+
+//Template.form.events({
+//	'submit form': function (e, tmpl) {
+//		if (typeof this.onSubmit == "function") {
+//			e.preventDefault();
+//			this.validateAll();
+//			this.onSubmit();
+//		}
+//	}
+//	// XXX update the selector to include all relevant events.
+//	, 'change input': function (e, tmpl) {
+//		if (typeof this.onChange == "function") {
+//			this.onChange(e, tmpl);
+//		}
+//	}
+//	, 'keyup input': function (e, tmpl) {
+//		if (typeof this.onChange == "function" && this.changeOnKeyup) {
+//			this.onChange(e, tmpl);
+//		}
+//	}
+//});
 
 UI.registerHelper('withField', function (as, field) {
 	if (typeof as != 'string') {
@@ -90,4 +98,70 @@ UI.registerHelper('val', function (name, property) {
 
 Forms = Forms || {};
 
+// XXX these paramaters are backwards compatible
+// if we give up on backwards compatability,
+// we can convert this to an object.
+Forms.handleSubmit = function (
+	template
+	, formSelector
+	, schema
+	, onSubmit
+	, onChange
+	, onInvalid
+	) {
 
+	var events = {};
+	formSelector = formSelector || 'form';
+	schema = schema || {};
+	performValidation = performValidation !== false;
+	// There's a difference between onChange and onInvalid, 
+	onInvalid = typeof onInvalid !== "function" ? Forms.defaultErrorHandler : onInvalid;
+	onChange = onChange === false || typeof onChange === "function" ? onChange : Forms.defaultChangeHandler;
+
+	if (typeof onSubmit === "function") {
+		events["submit " + formSelector] = function (e, tmpl) {
+			var formIsValid = this.validateAll();
+			if (!formIsValid) {
+				// XXX don't return if function returns true? false?
+				return onInvalid(this.dict.get('errors'));
+			}
+			onSubmit.call(this, [
+					this.item
+					, null // XXX make this backwards compatable by passing the 'form' object
+					, e
+					, tmpl
+				]);
+		};
+	}
+	if (typeof onChange === "function") {
+		var eventSelector = _([
+			// XXX move this to Events.defaultChangeSelector
+			// populate this array with other input change events, such as
+			// ['change', 'select'], ['change', 'checkbox'] etc.
+			["change", "input"]
+		]).map(function (selector) {
+			return [selector[0], formSelector, selector[1]].join(" ");
+		}).join(", ");
+
+		events[eventSelector] = function (e, tmpl) {
+			var value = Forms.getValue(e);
+			var valueIsValid = this.validate(value.name, value.value);
+			if (!valueIsValid) {
+				// XXX don't return if function returns true? false?
+				return onInvalid(_.pluck(this.dict.get('errors'), value.name));
+			}
+			onChange.call(this, [
+				e
+				, tmpl
+				, value.name
+				, value.value
+				, onInvalid
+				]);
+		};
+	}
+
+};
+
+Forms.defaultChangeHandler = function (e, tmpl, name, value, onInvalid) {
+	this.set(name, value);
+};
