@@ -63,7 +63,7 @@ Template.form.helpers({
 					var validator = self.get('validators', key);
 					
 					try {
-						return typeof validator === "function" && validator(value, options);
+						return typeof validator === "function" && validator.call(self, value, options, name);
 					} catch (error) {
 						return error;
 					}
@@ -178,6 +178,79 @@ Forms.validators = {
 			return "This field is required";
 		}
 	}
+    , number: function(val, options, fieldName){
+        // Validate that val is a valid number
+        if(!_.isFinite(val)){
+            return (fieldName + ' must be a number.');
+        }
+
+        // Validate that val meets given criteria (e.g. {larger: 4, smaller: 8})
+        if ( _.isObject(options) ) {
+            for (var key in options) {
+                var num =options[key];
+                switch (key) {
+                    case 'smaller':
+                        if (!(val < num)) return (fieldName + ' must be smaller than ' + num);
+                        break;
+                    case 'smallerOrEqual':
+                        if (!(val <= num)) return (fieldName + ' must be smaller than or equal to ' + num);
+                        break;
+                    case 'equal':
+                        if (!(val === num)) return (fieldName + ' must be equal to ' + num);
+                        break;
+                    case 'largerOrEqual':
+                        if (!(val >= num)) return (fieldName + ' must be larger than or equal to ' + num);
+                        break;
+                    case 'larger':
+                        if (!(val > num)) return (fieldName + ' must be larger than ' + num);
+                        break;
+                }
+            }
+        }
+    }
+    , minLength: function(val, length, fieldName){
+        if(!_.isString(val) || val.length < length){
+            return (fieldName + ' must be at least ' + length + ' characters.')
+        }
+    }
+    , maxLength: function(val, length, fieldName){
+        if(!_.isString(val) || val.length > length){
+            return (fieldName + ' must be ' + length + ' characters or less.')
+        }
+    }
+    , isOneOf: function(val, options, fieldName){
+        if(!_.contains(options, val)){
+            return (fieldName + ' must be one of ' + options.join(', '));
+        }
+    }
+    , usPhoneNumber: function(val, options, fieldName){
+        val = val.replace(/[^0-9]/g, '');
+        if(val.length !== 10){
+            return (fieldName + ' must be a valid phone number.');
+        }
+    }
+    , positiveNumber: function(val, options, fieldName){
+        val = Number(val);
+        if(val <= 0 || !_.isFinite(val)){
+            return (fieldName + ' must be a positive number.');
+        }
+    }
+    , negativeNumber: function(val, options, fieldName){
+        val = Number(val);
+        if(val >= 0 || !_.isFinite(val)){
+            return (fieldName + ' must be a negative number.');
+        }
+    }
+    , email: function(val, options, fieldName){
+        if(!emailRegex.test(val) || val.indexOf('.', val.indexOf('@')) == -1){
+            return (fieldName + ' must be a valid email address.');
+        }
+    }
+    , url: function(val, options, fieldName){
+        if(!urlRegex.test(val)){
+            return (fieldName + ' must be a valid url.');
+        }
+    }
 };
 
 // XXX these paramaters are backwards compatible

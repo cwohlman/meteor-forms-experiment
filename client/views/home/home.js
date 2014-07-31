@@ -26,11 +26,15 @@ Template.Home.helpers({
 			}
 			, age: {
 				required: true
+				, positiveNumber: {}
 				, type: "number"
 			}
 			, child: {
 				required: true
 				, type: 'text'
+				, isOneOf: [
+					"sam"
+				]
 			}
 		};
 	}
