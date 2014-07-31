@@ -28,7 +28,7 @@ Template.form.helpers({
 				// required if it exists in the schema.
 				// XXX check for this.schema.onValidate
 				var isValid = (!this.schema[name] || value);
-				this.set(name, isValid, 'errors');
+				this.set(name, !isValid, 'errors');
 				return isValid;
 			}
 			, validateAll: function (throwOnInvalid) {
@@ -144,7 +144,7 @@ Forms.handleSubmit = function (
 		}).join(", ");
 
 		events[eventSelector] = function (e, tmpl) {
-			var value = Forms.getValue(e);
+			var value = Forms.getValue(e.currentTarget);
 			var valueIsValid = this.validate(value.name, value.value);
 			if (!valueIsValid) {
 				// XXX don't return if function returns true? false?
@@ -162,6 +162,22 @@ Forms.handleSubmit = function (
 
 };
 
+Forms.getValue = function (inputElement) {
+	// XXX replace this simplistic code with logic 
+	// that checks for element type, etc and correctly returns
+	// values for checkboxes, radio buttons, select boxes, etc.
+	return {
+		name: inputElement.name
+		, value: inputElement.value
+	};
+};
+
 Forms.defaultChangeHandler = function (e, tmpl, name, value, onInvalid) {
 	this.set(name, value);
+};
+
+Forms.defaultErrorHandler = function (errors) {
+	// errors is an object with a key/value pair for every error
+	console.log('Errors in form', errors);
+	throw new Error('Form is invalid.');
 };
