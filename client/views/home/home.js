@@ -70,10 +70,7 @@ Template.inputGroup.helpers({
 		return this.field.label || this.field.title || this.field.name;
 	}
 	, groupClass: function () {
-		return this.get(this.field.name, 'errors') ? 'has-error' : '';
-	}
-	, helpText: function () {
-		return this.get(this.field.name, 'errors') ? 'This field is invalid.' : '';
+		return this.get('errors', this.field.name) ? 'has-error' : '';
 	}
 });
 

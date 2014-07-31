@@ -13,41 +13,47 @@ Template.form.helpers({
 				// returns this.dict[property][name] || this[property][name]
 				// includes null checks, property defaults to 'item'
 				if (arguments.length === 0) {
-					name = this.field && this.field.name;
+					name = null;
 					prop = "item";
 				} else if (arguments.length == 1) {
 					name = property;
 					property = "item";
 				}
-				if (!name) throw new Error("No field name specified - can't get value.");
 				if (!property) throw new Error("No property name specified - can't get value.");
 
 				var dictEntry = this.dict.get(property);
 				var itemObject = this[property];
+
+				if (!name) {
+					return _({}).chain().extend(itemObject || {}).extend(dictEntry || {}).value();
+				}
 
 				return (dictEntry && dictEntry[name]) || (itemObject && itemObject[name]);
 			}
 			, set: function (property, name, value) {
 				if (arguments.length == 1) {
 					value = property
-					name = this.field && this.field.name;
+					name = null;
 					property = 'item';
 				} else if (arguments.length == 2) {
 					value = name;
 					name = property;
 					property = 'item';
 				}
-				if (!name) throw new Error("No field name specified - can't get value.");
 				if (!property) throw new Error("No property name specified - can't get value.");
 				// it's perfectly acceptable to set the value to null or undefined.
 
 				var dictEntry = this.dict.get(property) || {};
 				
-				dictEntry[name] = value;
+				if (name) dictEntry[name] = value;
+				else dictEntry = value;
 
 				this.dict.set(property, dictEntry);
 
-				if (property == "item") return this.validate(name, value);
+				if (property == "item") {
+					if (name) return this.validate(name, value);
+					else return this.validateAll();
+				}
 			}
 			, validate: function (name, value, schema) {
 				var self = this;
@@ -150,11 +156,18 @@ UI.registerHelper('withField', function () {
 });
 
 UI.registerHelper('val', function (property, name) {
-	if (typeof name != 'string') {
-		name = property;
-		property = 'item';
+	var args = _.toArray(arguments).slice(0, -1);
+	if (typeof this.get === "function") return this.get.apply(
+		this
+		, args
+		);
+	else {
+		if (args.length == 1) {
+			name = property;
+			property = "item";
+		}
+		return this[property] && this[property][name];
 	}
-	return (typeof this.get == 'function' && this.get(property, name)) || (this[property] || {})[name];
 });
 
 Forms = Forms || {};

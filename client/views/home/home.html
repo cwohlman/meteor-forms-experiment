@@ -92,7 +92,9 @@
 			{{else}}
 				<input type="{{inputType}}" name="{{field.name}}" value="{{val field.name}}" class="{{controlClass}}">
 			{{/if}}
-			<span class="help-block">{{helpText}}</span>
+			{{#each val 'errors' field.name}}
+				<span class="help-block">{{this}}</span>
+			{{/each}}
 		</div>
 	</div>
 </template>
