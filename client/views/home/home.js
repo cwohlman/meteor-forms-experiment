@@ -38,6 +38,11 @@ Template.Home.helpers({
 			}
 		};
 	}
+	, onSubmit: function () {
+		return function (values) {
+			alert(JSON.stringify(values));
+		};
+	}
 });
 
 Template.Home.events({
@@ -91,13 +96,12 @@ Forms.handleSubmit(
 	}
 	);
 
-Forms.handleSubmit(
-	Template.Home
-	, '.form-complex'
-	, null
-	, function (values) {
-		alert(JSON.stringify(values));
-	}
-	);
+// Forms.handleSubmit(
+// 	Template.Home
+// 	, '.form-complex'
+// 	, null
+// 	, function (values) {
+// 	}
+// 	);
 
 

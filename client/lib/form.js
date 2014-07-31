@@ -101,6 +101,10 @@ Template.form.helpers({
 			}
 		});
 
+		if (typeof this.onSubmit == "function" && typeof this.onChange != "function" && this.onChange !== false) {
+			this.onChange = Forms.defaultChangeHandler;
+		}
+
 		return this;
 	}
 });
