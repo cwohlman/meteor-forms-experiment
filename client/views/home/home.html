@@ -28,7 +28,7 @@
 					<label class="col-sm-4">Name</label>
 					<div class="col-sm-8">
 						<input type="text" name="name" value="{{val 'name'}}" class="form-control">
-						{{#if val 'name' 'errors'}}
+						{{#if val 'errors' 'name'}}
 							<span class="help-block">
 								Name is invalid
 							</span>

@@ -1,82 +1,127 @@
 Template.form.helpers({
 	context: function () {
 		this.dict = this.dict || new ReactiveDict();
-		this.item = this.item || {};
-		this.schema = this.schema || {};
-		return _({}).chain().extend(this).extend({
-			dict: this.dict
-			, item: _({})
-				.chain()
-				.extend(this.item)
-				.extend(this.dict.get('item') || {})
-				.value()
-			, source: this.item
-			, get: function (name, property) {
-				property = typeof property == 'string' ? property : 'item';
-				return (this.dict.get(property) || {})[name];
+
+		this.validators = _(Forms.validators)
+			.chain()
+			.clone()
+			.extend({} || this.validators)
+			.value();
+
+		_.extend(this, {
+			get: function (property, name) {
+				// returns this.dict[property][name] || this[property][name]
+				// includes null checks, property defaults to 'item'
+				if (arguments.length === 0) {
+					name = this.field && this.field.name;
+					prop = "item";
+				} else if (arguments.length == 1) {
+					name = property;
+					property = "item";
+				}
+				if (!name) throw new Error("No field name specified - can't get value.");
+				if (!property) throw new Error("No property name specified - can't get value.");
+
+				var dictEntry = this.dict.get(property);
+				var itemObject = this[property];
+
+				return (dictEntry && dictEntry[name]) || (itemObject && itemObject[name]);
 			}
-			, set: function (name, value, property) {
-				property = property || 'item';
-				var val = this.dict.get(property) || {};
-				val[name] = value;
-				this.dict.set(property, val);
-				if (property == 'item') this.validate(name, value);
+			, set: function (property, name, value) {
+				if (arguments.length == 1) {
+					value = property
+					name = this.field && this.field.name;
+					property = 'item';
+				} else if (arguments.length == 2) {
+					value = name;
+					name = property;
+					property = 'item';
+				}
+				if (!name) throw new Error("No field name specified - can't get value.");
+				if (!property) throw new Error("No property name specified - can't get value.");
+				// it's perfectly acceptable to set the value to null or undefined.
+
+				var dictEntry = this.dict.get(property) || {};
+				
+				dictEntry[name] = value;
+
+				this.dict.set(property, dictEntry);
+
+				if (property == "item") return this.validate(name, value);
 			}
 			, validate: function (name, value, schema) {
-				// XXX implement real validation
-				// this dummy validation simply marks a field as
-				// required if it exists in the schema.
-				// XXX check for this.schema.onValidate
-				schema = schema || this.schema || {};
-				var isValid = (!schema[name] || value);
-				this.set(name, !isValid, 'errors');
-				return isValid;
-			}
-			, validateAll: function (throwOnInvalid, schema) {
 				var self = this;
-				schema = schema || this.schema || {};
-				var valid = _.all(schema, function (value, name) {
-					return self.validate(name, self.item[name], schema);
+				schema = schema || this.get('schema', name);
+
+				var errors = _.map(schema, function (options, key) {
+					var validator = self.get('validators', key);
+					
+					try {
+						return typeof validator === "function" && validator(value, options);
+					} catch (error) {
+						return error;
+					}
+					
 				});
-				if (throwOnInvalid && !valid) {
-					// XXX we should check this.dict.get('errors') for errors.
-					throw new Error('Form is invalid');
-				} else {
-					return valid;
+				
+				errors = _.values(errors);
+
+				errors = _.filter(errors, _.identity);
+
+				this.set('errors', name, errors.length ? errors : null);
+
+				return errors.length === 0;
+			}
+			, validateAll: function (item, schema) {
+				var self = this;
+				if (arguments.length === 0) {
+					schema = this.dict.get('schema') || this.schema;
+					item = null;
+				} else if (arguments.length == 1) {
+					schema = item || this.dict.get('schema') || this.schema;
+					item = null;
 				}
+				var errors = _.map(schema, function (options, key) {
+					return self.validate(key, self.get(key), options);
+				});
+				
+				errors = _.values(errors);
+
+				errors = _.filter(errors, function (e) {
+					return !e;
+				});
+
+				return errors.length === 0;
 			}
-			, change: function (inputElement) {
-				// XXX check for checkbox, etc.
-				// XXX check for this.schema.onChange
-				this.set(inputElement.name, inputElement.value);
-			}
-		}).value();
+		});
+
+		return this;
 	}
 });
 
 // XXX We could write events here - this would properly scope the events handlers
 // however this makes it hard to customize the event handlers on a per form basis.
 
-//Template.form.events({
-//	'submit form': function (e, tmpl) {
-//		if (typeof this.onSubmit == "function") {
-//			e.preventDefault();
-//			this.validateAll();
-//			this.onSubmit();
-//		}
-//	}
-//	// XXX update the selector to include all relevant events.
-//	, 'change input': function (e, tmpl) {
-//		if (typeof this.onChange == "function") {
-//			this.onChange(e, tmpl);
-//		}
-//	}
-//	, 'keyup input': function (e, tmpl) {
-//		if (typeof this.onChange == "function" && this.changeOnKeyup) {
-//			this.onChange(e, tmpl);
-//		}
-//	}
-//});
+Template.form.events({
+	'submit form': function (e, tmpl) {
+		if (typeof this.onSubmit == "function") {
+			e.preventDefault();
+			this.validateAll();
+			this.onSubmit();
+		}
+	}
+	// XXX update the selector to include all relevant events.
+	, 'change input': function (e, tmpl) {
+		if (typeof this.onChange == "function") {
+			this.onChange(e, tmpl);
+		}
+	}
+	, 'keyup input': function (e, tmpl) {
+		if (typeof this.onChange == "function" && this.changeOnKeyup) {
+			this.onChange(e, tmpl);
+		}
+	}
+});
 
 UI.registerHelper('withField', function () {
 
@@ -104,12 +149,23 @@ UI.registerHelper('withField', function () {
 	return result;
 });
 
-UI.registerHelper('val', function (name, property) {
-	if (typeof property != 'string') property = 'item';
-	return (typeof this.get == 'function' && this.get(name, property)) || (this[property] || {})[name];
+UI.registerHelper('val', function (property, name) {
+	if (typeof name != 'string') {
+		name = property;
+		property = 'item';
+	}
+	return (typeof this.get == 'function' && this.get(property, name)) || (this[property] || {})[name];
 });
 
 Forms = Forms || {};
+
+Forms.validators = {
+	required: function (value, options) {
+		if (!value && options) {
+			return "This field is required";
+		}
+	}
+};
 
 // XXX these paramaters are backwards compatible
 // if we give up on backwards compatability,
@@ -130,17 +186,21 @@ Forms.handleSubmit = function (
 	onInvalid = typeof onInvalid !== "function" ? Forms.defaultErrorHandler : onInvalid;
 	onChange = onChange === false || typeof onChange === "function" ? onChange : Forms.defaultChangeHandler;
 
+	if (schema) {
+		console.log('Better to specify schema as an argument to the form block helper - this allows schema to be used on change')
+	}
+
 	if (typeof onSubmit === "function") {
 		events["submit " + formSelector] = function (e, tmpl) {
 			e.preventDefault();
 
-			var formIsValid = this.validateAll(false, schema);
+			var formIsValid = this.validateAll(schema);
 			if (!formIsValid) {
 				// XXX don't return if function returns true? false?
 				return onInvalid(this.dict.get('errors'));
 			}
 			onSubmit.apply(this, [
-					this.item
+					_.chain(this.item).clone().extend(this.dict.get('item') || {}).value()
 					, null // XXX make this backwards compatable by passing the 'form' object
 					, e
 					, tmpl
@@ -195,5 +255,6 @@ Forms.defaultChangeHandler = function (e, tmpl, name, value, onInvalid) {
 Forms.defaultErrorHandler = function (errors) {
 	// errors is an object with a key/value pair for every error
 	console.log('Errors in form', errors);
+	alert('Errors in form');
 	throw new Error('Form is invalid.');
 };
