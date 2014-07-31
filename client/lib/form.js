@@ -108,23 +108,39 @@ Template.form.helpers({
 // XXX We could write events here - this would properly scope the events handlers
 // however this makes it hard to customize the event handlers on a per form basis.
 
-Template.form.events({
-	'submit form': function (e, tmpl) {
-		if (typeof this.onSubmit == "function") {
+Forms.events = {
+	'submit': function (e, tmpl) {
+		if (typeof this.onSubmit == 'function') {
 			e.preventDefault();
-			this.validateAll();
-			this.onSubmit();
+
+			var formIsValid = this.validateAll();
+			if (formIsValid) {
+					this.onSubmit(
+						_.chain(this.item).clone().extend(this.dict.get('item') || {}).value()
+						, null // XXX make this backwards compatable by passing the 'form' object
+						, e
+						, tmpl
+					);
+			} else if (typeof this.onInvalid == 'function') {
+				this.onInvalid(this.get('errors', null));
+			}
 		}
 	}
+	, 'change': function (e, tmpl) {
+		if (typeof this.onChange == 'function') {
+			var value = Forms.getValue(e.currentTarget);
+			this.onChange(e, tmpl, value.name, value.value);
+		}
+	}
+};
+
+Template.form.events({
+	'submit form': Forms.events.submit
 	// XXX update the selector to include all relevant events.
-	, 'change input': function (e, tmpl) {
-		if (typeof this.onChange == "function") {
-			this.onChange(e, tmpl);
-		}
-	}
+	, 'change input': Forms.events.change
 	, 'keyup input': function (e, tmpl) {
-		if (typeof this.onChange == "function" && this.changeOnKeyup) {
-			this.onChange(e, tmpl);
+		if (this.liveChanges) {
+			return Forms.events.change.apply(this, arguments);
 		}
 	}
 });
@@ -265,35 +281,32 @@ Forms.handleSubmit = function (
 	, onInvalid
 	) {
 
-	var events = {};
+	var handlers = {}
+		events = {};
+
+	if (typeof onSubmit == 'function') handlers.onSubmit = onSubmit;
+	if (typeof onChange == 'function') handlers.onChange = onChange;
+	else if (onChange !== false) handlers.onChange = Forms.defaultChangeHandler;
+	if (typeof onInvalid == 'function') handlers.onInvalid = onInvalid;
+
 	formSelector = formSelector || 'form';
 
-	// There's a difference between onChange and onInvalid, 
-	onInvalid = typeof onInvalid !== "function" ? Forms.defaultErrorHandler : onInvalid;
-	onChange = onChange === false || typeof onChange === "function" ? onChange : Forms.defaultChangeHandler;
-
 	if (schema) {
-		console.log('Better to specify schema as an argument to the form block helper - this allows schema to be used on change')
+		console.log('Better to specify schema as an argument to the form block helper - this allows schema to be used on change');
 	}
 
-	if (typeof onSubmit === "function") {
-		events["submit " + formSelector] = function (e, tmpl) {
-			e.preventDefault();
-
-			var formIsValid = this.validateAll(schema);
-			if (!formIsValid) {
-				// XXX don't return if function returns true? false?
-				return onInvalid(this.dict.get('errors'));
-			}
-			onSubmit.apply(this, [
-					_.chain(this.item).clone().extend(this.dict.get('item') || {}).value()
-					, null // XXX make this backwards compatable by passing the 'form' object
-					, e
-					, tmpl
-				]);
+	var makeHandler = function (func) {
+		return function () {
+			var self = _({}).extend(this);
+				self = _(self).extend(handlers);
+			return func.apply(self, arguments);
 		};
+	};
+
+	if (typeof handlers.onSubmit === "function") {
+		events["submit " + formSelector] = makeHandler(Forms.events.submit);
 	}
-	if (typeof onChange === "function") {
+	if (typeof handlers.onChange === "function") {
 		var eventSelector = _([
 			// XXX move this to Events.defaultChangeSelector
 			// populate this array with other input change events, such as
@@ -303,22 +316,7 @@ Forms.handleSubmit = function (
 			return [selector[0], formSelector, selector[1]].join(" ");
 		}).join(", ");
 
-		events[eventSelector] = function (e, tmpl) {
-			var value = Forms.getValue(e.currentTarget);
-			onChange.apply(this, [
-				e
-				, tmpl
-				, value.name
-				, value.value
-				, onInvalid
-				]);
-			// // XXX we run the value afterwards here
-			// var valueIsValid = this.validate(value.name, value.value, schema);
-			// if (!valueIsValid) {
-			// 	// XXX don't return if function returns true? false?
-			// 	return onInvalid(_.pluck(this.dict.get('errors'), value.name));
-			// }
-		};
+		events[eventSelector] = makeHandler(Forms.events.change);
 	}
 
 	template.events(events);
