@@ -12,7 +12,7 @@ Template.form.helpers({
 				.value()
 			, source: this.item
 			, get: function (name, property) {
-				property = property || 'item';
+				property = typeof property == 'string' ? property : 'item';
 				return (this.dict.get(property) || {})[name];
 			}
 			, set: function (name, value, property) {
@@ -95,7 +95,7 @@ UI.registerHelper('withField', function (as, field) {
 
 UI.registerHelper('val', function (name, property) {
 	if (typeof property != 'string') property = 'item';
-	return this[property][name];
+	return (typeof this.get == 'function' && this.get(name, property)) || (this[property] || {})[name];
 });
 
 Forms = Forms || {};
