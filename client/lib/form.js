@@ -142,9 +142,13 @@ Template.form.events({
 	'submit form': Forms.events.submit
 	// XXX update the selector to include all relevant events.
 	, 'change input': Forms.events.change
-	, 'keyup input': function (e, tmpl) {
+	, 'keydown input': function (e, tmpl) {
 		if (this.liveChanges) {
-			return Forms.events.change.apply(this, arguments);
+			var self = this;
+			var args = _.toArray(arguments);
+			setTimeout(function () {
+				Forms.events.change.apply(self, args);
+			}, 0);
 		}
 	}
 });
