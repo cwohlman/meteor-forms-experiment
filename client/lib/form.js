@@ -78,18 +78,29 @@ Template.form.helpers({
 //	}
 //});
 
-UI.registerHelper('withField', function (as, field) {
-	if (typeof as != 'string') {
-		field = as;
-		as = 'field';
-	}
-	if (typeof as != 'string' || typeof field != 'object') {
+UI.registerHelper('withField', function () {
+
+	var args = _.toArray(arguments);
+	var objs = _.filter(args, function (a) {
+		return typeof a === "object" &&
+		(
+			!a.hash ||
+			_.keys(a.hash).length
+		);
+	});
+	var strs = _.filter(args, function (a) {return typeof a === "string";});
+
+	var as = strs[0] || 'field';
+	var field = objs.length > 1 ? objs[1] : objs[0];
+	var self = objs.length > 1 ? objs[0] : this;
+
+	if (typeof as != 'string' || typeof field != 'object' || typeof self != 'object') {
 		// XXX just return {} instead?
 		throw new Error('Invalid arguments to withField helper.');
 	}
 	var extender = {};
-	extender[as] = field.hash;
-	var result = _.extend(_.extend({}, this), extender);
+	extender[as] = field.hash || field;
+	var result = _.extend(_.extend({}, self), extender);
 	return result;
 });
 
