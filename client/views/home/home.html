@@ -2,11 +2,23 @@
 	<div class="container">
 		Useful Home Page
 		{{#form item=item}}
-			{{> input withField name="name"}}
-			{{> input withField name="age"}}
-			{{> input withField name="weight"}}
-			{{> input withField name="height"}}
-			{{> input withField name="color"}}
+			<form class="form-horizontal form-simple">
+				<legend>Simple Form</legend>
+				<div>This form uses plain html markup and custom events</div>
+				<div class="form-group">
+					<label class="col-sm-4">Name</label>
+					<div class="col-sm-8">
+						<input type="text" name="name" value="{{val 'name'}}" class="form-control">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-4"></label>
+					<div class="col-sm-8">
+						<button type="button" class="btn btn-success btn-iamjoe">I am Joe</button>
+						<button type="submit" class="btn btn-primary">Done</button>
+					</div>
+				</div>
+			</form>
 		{{/form}}
 	</div>
 </template>
