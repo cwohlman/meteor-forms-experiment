@@ -25,11 +25,16 @@ Template.Home.events({
 	}
 });
 
-Template.input.events({
-	'keyup input': function (e, tmpl) {
-		var name = e.currentTarget.name;
-		var value = e.currentTarget.value;
-		this.set(name, value);
+Forms.handleSubmit(
+	Template.Home
+	, '.form-basic'
+	, {
+		name: {
+			required: true
+		}
 	}
-});
+	, function (values) {
+		alert(JSON.stringify(values));
+	}
+	);
 

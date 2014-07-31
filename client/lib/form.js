@@ -112,20 +112,21 @@ Forms.handleSubmit = function (
 
 	var events = {};
 	formSelector = formSelector || 'form';
+	// XXX schema is currnetly ignored
 	schema = schema || {};
-	performValidation = performValidation !== false;
 	// There's a difference between onChange and onInvalid, 
 	onInvalid = typeof onInvalid !== "function" ? Forms.defaultErrorHandler : onInvalid;
 	onChange = onChange === false || typeof onChange === "function" ? onChange : Forms.defaultChangeHandler;
 
 	if (typeof onSubmit === "function") {
 		events["submit " + formSelector] = function (e, tmpl) {
+			e.preventDefault();
 			var formIsValid = this.validateAll();
 			if (!formIsValid) {
 				// XXX don't return if function returns true? false?
 				return onInvalid(this.dict.get('errors'));
 			}
-			onSubmit.call(this, [
+			onSubmit.apply(this, [
 					this.item
 					, null // XXX make this backwards compatable by passing the 'form' object
 					, e
@@ -150,7 +151,7 @@ Forms.handleSubmit = function (
 				// XXX don't return if function returns true? false?
 				return onInvalid(_.pluck(this.dict.get('errors'), value.name));
 			}
-			onChange.call(this, [
+			onChange.apply(this, [
 				e
 				, tmpl
 				, value.name
@@ -160,6 +161,7 @@ Forms.handleSubmit = function (
 		};
 	}
 
+	template.events(events);
 };
 
 Forms.getValue = function (inputElement) {
