@@ -12,6 +12,8 @@ Template.form.helpers({
 			get: function (property, name) {
 				// returns this.dict[property][name] || this[property][name]
 				// includes null checks, property defaults to 'item'
+				// pass null for name to return the entire this.dict[property]
+				// will extend this[property] with values from dict[property]
 				if (arguments.length === 0) {
 					name = null;
 					prop = "item";
