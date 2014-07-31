@@ -1,6 +1,6 @@
 Template.Home.helpers({
 	item: function () {
-		return {
+		return Session.get('item') || {
 			name: 'Joe'
 			, children: [
 				{
@@ -42,6 +42,11 @@ Template.Home.helpers({
 		return function (values) {
 			alert(JSON.stringify(values));
 		};
+	}
+	, liveSubmit: function () {
+		return function (values) {
+			Session.set('item', values);
+		}
 	}
 });
 

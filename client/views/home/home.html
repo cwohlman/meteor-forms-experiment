@@ -65,6 +65,18 @@
 				{{/inputGroup}}
 			{{/autoForm}}
 		{{/form}}
+		{{#form 
+			item=item 
+			schema=schema
+			title="Live Form" 
+			subtitle="This form demonstrates live submit - we will update all other forms as this one is changed."
+			formClass="form-live"
+			onSubmit=liveSubmit
+			liveSubmit=true
+		}}
+			{{#autoForm}}
+			{{/autoForm}}
+		{{/form}}
 	</div>
 </template>
 

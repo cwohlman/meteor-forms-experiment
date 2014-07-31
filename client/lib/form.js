@@ -137,6 +137,9 @@ Forms.events = {
 			var value = Forms.getValue(e.currentTarget);
 			this.onChange(e, tmpl, value.name, value.value);
 		}
+		if (typeof this.onSubmit == 'function' && this.liveSubmit) {
+			Forms.events.submit.apply(this, arguments);
+		}
 	}
 };
 
