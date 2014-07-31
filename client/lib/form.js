@@ -20,21 +20,23 @@ Template.form.helpers({
 				var val = this.dict.get(property) || {};
 				val[name] = value;
 				this.dict.set(property, val);
-				if (property == 'item') validate(name, value);
+				if (property == 'item') this.validate(name, value);
 			}
-			, validate: function (name, value) {
+			, validate: function (name, value, schema) {
 				// XXX implement real validation
 				// this dummy validation simply marks a field as
 				// required if it exists in the schema.
 				// XXX check for this.schema.onValidate
-				var isValid = (!this.schema[name] || value);
+				schema = schema || this.schema || {};
+				var isValid = (!schema[name] || value);
 				this.set(name, !isValid, 'errors');
 				return isValid;
 			}
-			, validateAll: function (throwOnInvalid) {
+			, validateAll: function (throwOnInvalid, schema) {
 				var self = this;
-				var valid = _.all(self.item, function (value, name) {
-					return self.validate(name, value);
+				schema = schema || this.schema || {};
+				var valid = _.all(schema, function (value, name) {
+					return self.validate(name, self.item[name], schema);
 				});
 				if (throwOnInvalid && !valid) {
 					// XXX we should check this.dict.get('errors') for errors.
@@ -112,8 +114,7 @@ Forms.handleSubmit = function (
 
 	var events = {};
 	formSelector = formSelector || 'form';
-	// XXX schema is currnetly ignored
-	schema = schema || {};
+
 	// There's a difference between onChange and onInvalid, 
 	onInvalid = typeof onInvalid !== "function" ? Forms.defaultErrorHandler : onInvalid;
 	onChange = onChange === false || typeof onChange === "function" ? onChange : Forms.defaultChangeHandler;
@@ -121,7 +122,8 @@ Forms.handleSubmit = function (
 	if (typeof onSubmit === "function") {
 		events["submit " + formSelector] = function (e, tmpl) {
 			e.preventDefault();
-			var formIsValid = this.validateAll();
+
+			var formIsValid = this.validateAll(false, schema);
 			if (!formIsValid) {
 				// XXX don't return if function returns true? false?
 				return onInvalid(this.dict.get('errors'));
@@ -146,11 +148,6 @@ Forms.handleSubmit = function (
 
 		events[eventSelector] = function (e, tmpl) {
 			var value = Forms.getValue(e.currentTarget);
-			var valueIsValid = this.validate(value.name, value.value);
-			if (!valueIsValid) {
-				// XXX don't return if function returns true? false?
-				return onInvalid(_.pluck(this.dict.get('errors'), value.name));
-			}
 			onChange.apply(this, [
 				e
 				, tmpl
@@ -158,6 +155,12 @@ Forms.handleSubmit = function (
 				, value.value
 				, onInvalid
 				]);
+			// // XXX we run the value afterwards here
+			// var valueIsValid = this.validate(value.name, value.value, schema);
+			// if (!valueIsValid) {
+			// 	// XXX don't return if function returns true? false?
+			// 	return onInvalid(_.pluck(this.dict.get('errors'), value.name));
+			// }
 		};
 	}
 
