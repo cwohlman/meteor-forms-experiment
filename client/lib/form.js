@@ -1,4 +1,5 @@
-Forms = Forms || {};
+// perak: Now this works without old forms library
+Forms = typeof(Forms) == "undefined" ? {} : Forms;
 
 Forms.helpers = {
 	get: function (property, name) {
@@ -183,9 +184,11 @@ Forms.helpers = {
 };
 
 Forms.handlers = {
-	onSubmit: function () {}
+	onSubmit: function() {}
 	, onChange: function (e, tmpl, name, value) {
-		this.set(name, value);
+		if(typeof(this.set) == "function") {
+			this.set(name, value);			
+		}
 	}
 	, onInvalid: function (errors) {
 		console.log('Errors in form', errors);
@@ -196,18 +199,27 @@ Forms.handlers = {
 
 Forms.events = {
 	'submit': function (e, tmpl) {
-		if (typeof this.onSubmit == 'function') {
-			e.preventDefault();
+		e.preventDefault();
+
+		if (typeof(this.onSubmit) == 'function') {
+
+			if(typeof(this.validateAll) != "function" || typeof(this.onInvalid) != "function") {
+				return;
+			}
+
+			if(typeof(this.item) == "undefined") {
+				this.item = {};
+			}
 
 			var formIsValid = this.validateAll();
 			if (formIsValid) {
-					this.onSubmit(
-						_.chain(this.item).clone().extend(this.dict.get('item') || {}).value()
-						, null // XXX make this backwards compatable by passing the 'form' object
-						, e
-						, tmpl
-					);
-			} else if (typeof this.onInvalid == 'function') {
+				this.onSubmit(
+					_.chain(this.item).clone().extend(this.dict && this.dict.get('item') || {}).value()
+					, null // XXX make this backwards compatable by passing the 'form' object
+					, e
+					, tmpl
+				);
+			} else {
 				this.onInvalid(this.get('errors', null));
 			}
 		}
@@ -332,7 +344,9 @@ UI.registerHelper('val', function (property, name) {
 // XXX these paramaters are backwards compatible
 // if we give up on backwards compatability,
 // we can convert this to an object.
-Forms.handleSubmit = function (
+// 
+// I changed this to allow coexistence with old forms library
+Forms.handleSubmit = Forms.handleSubmit || function (
 	template
 	, formSelector
 	, schema
@@ -384,5 +398,3 @@ Forms.handleSubmit = function (
 
 	template.events(events);
 };
-
-
